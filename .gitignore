@@ -1,1 +1,14 @@
+# Editor
 .vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated output
+ReadAndWriteMain/*.json
+ReadTfvarsAndWriteJson/*.json
