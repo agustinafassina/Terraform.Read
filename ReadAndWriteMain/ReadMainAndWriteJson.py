@@ -1,36 +1,57 @@
-import hcl2
+"""Read a Terraform .tf file and write its content as JSON."""
+
+import argparse
 import json
+import sys
+from pathlib import Path
+
+import hcl2
+
+SERIALIZATION_OPTIONS = hcl2.SerializationOptions(
+    with_comments=False,
+    explicit_blocks=False,
+    strip_string_quotes=True,
+)
+
 
 def load_tf_file(filename):
-    """ Read file .tf and write json. """
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = hcl2.load(f)
-            return data
-    except FileNotFoundError:
-        print(f"The file {filename} not found.")
-        return None
-    except Exception as e:
-        print(f"Error reading file {filename}: {e}")
-        return None
+    """Parse a .tf file and return its content as a dictionary."""
+    with open(filename, "r", encoding="utf-8") as f:
+        return hcl2.load(f, serialization_options=SERIALIZATION_OPTIONS)
+
 
 def save_to_json(data, output_file):
-    """ Save a dictionary to a JSON file. """
+    """Save a dictionary to a JSON file."""
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Convert a Terraform .tf file to JSON.")
+    parser.add_argument("input", nargs="?", default="main.tf", help="Path to the .tf file (default: main.tf)")
+    parser.add_argument("-o", "--output", help="Path to the output JSON file (default: input name with .json)")
+    args = parser.parse_args(argv)
+
+    output = args.output or str(Path(args.input).with_suffix(".json"))
+
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        print(f"File JSON saved in '{output_file}'.")
+        data = load_tf_file(args.input)
+    except FileNotFoundError:
+        print(f"File '{args.input}' not found.", file=sys.stderr)
+        return 1
     except Exception as e:
-        print(f"Error writing to JSON file: {e}")
+        print(f"Error reading file '{args.input}': {e}", file=sys.stderr)
+        return 1
+
+    try:
+        save_to_json(data, output)
+    except OSError as e:
+        print(f"Error writing JSON file '{output}': {e}", file=sys.stderr)
+        return 1
+
+    print(f"File JSON saved in '{output}'.")
+    return 0
+
 
 if __name__ == "__main__":
-    # Especifica la ruta al archivo main.tf y el archivo de salida JSON
-    tf_file_path = 'main.tf'  # Cambia esto a la ruta de tu archivo main.tf
-    output_json_file = 'main.json'  # Nombre del archivo JSON de salida
-
-    # Cargar el archivo main.tf
-    tf_data = load_tf_file(tf_file_path)
-
-    if tf_data is not None:
-        # Guardar los datos en JSON
-        save_to_json(tf_data, output_json_file)
+    sys.exit(main())
